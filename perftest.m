@@ -11,14 +11,15 @@ function [decision,parameters] = perftest(SessionData,thresProb,thresROC)
 %
 % INPUT ARGUMENTS
 % SessionData         SessionData struct written by Bpodr0.9 after behavior
+%
+% OPTIONAL INPUT ARGUMENTS
 % thresProb           probability threshold for "acceptable behavior"
 % thresROC            auROC threshold for difference between licking to two
-%                       cues
-%
+%                     cues
 %
 % OUTPUT ARGUMENTS
 % decision      0 or 1 indicating whether behavior met threshold
-% parameters    2x5 vector holding stuff
+% parameters    2x5 vector holding test stats
 %
 % Sarah Starosta, August 2018
 %
@@ -26,21 +27,27 @@ function [decision,parameters] = perftest(SessionData,thresProb,thresROC)
 % Sep 2018  ETG   initiated version control
 %           ETG   all comments
 
+%% use default threshold values if none provided
+if nargin == 1
+    thresProb = 0.8;
+    thresROC  = 0.7;
+end
 
+%% Loop through trials to get lick data from Bpod struct
 for i=1:length(SessionData.RawEvents.Trial)
-    %% define epochs during each trial: "pre", "sound", "reward"
+    % define epochs during each trial: "pre", "sound", "reward"
     
     % the "pre" epoch is the 0.5 seconds prior to sound delivery
-    preStart=SessionData.RawEvents.Trial{1,i}.States.SoundDelivery(1)-0.5;
-    preStop=SessionData.RawEvents.Trial{1,i}.States.SoundDelivery(1);
+    preStart = SessionData.RawEvents.Trial{1,i}.States.SoundDelivery(1)-0.5;
+    preStop  = SessionData.RawEvents.Trial{1,i}.States.SoundDelivery(1);
     % the "sound" epoch is 1 second long and starts at the the last 0.2 
     % seconds of the 0.5-second-long sound cue
-    soundStart=SessionData.RawEvents.Trial{1,i}.States.SoundDelivery(1)+0.3;
-    soundStop=SessionData.RawEvents.Trial{1,i}.States.SoundDelivery(2)+0.8;
+    soundStart = SessionData.RawEvents.Trial{1,i}.States.SoundDelivery(1)+0.3;
+    soundStop  = SessionData.RawEvents.Trial{1,i}.States.SoundDelivery(2)+0.8;
     % "reward" epoch is 0.5 seconds long and starts at the reward delivery
-    rewStart=SessionData.RawEvents.Trial{1,i}.States.Outcome(1);
+    rewStart = SessionData.RawEvents.Trial{1,i}.States.Outcome(1);
     
-    %% count licks w/in each epoch
+    % count licks w/in each epoch
     % create tx4 matrix licks.  columns 1 and 2 are lick rates for "pre"
     % and "sound" epochs.  column 3 is a sum of licks in "reward" epoch.
     % column 4 is TrialType from Bpod
@@ -77,10 +84,10 @@ end
 
 % quantify lick rate differences: rewarded vs. non-rewarded trials
 diffStim(1) =   mroc(all{1,1},all{3,1}); %  auROC for lick rate difference in sound epoch between types 1 and 3
-diffStim(2) = ttest2(all{1,1},all{3,1}); % t-stat for lick rate difference in sound epoch between types 1 and 3
+diffStim(2) = ttest2(all{1,1},all{3,1}); % t-test for lick rate difference in sound epoch between types 1 and 3
 % quantify lick rate differences in rewarded trials: before vs. after cue
 diffBase(1) =   mroc(all{1,1},all{1,2}); %  auROC for lick rate difference in type 1 trials between sound and pre epochs
-diffBase(2) =  ttest(all{1,1},all{1,2}); % t-stat for lick rate difference in type 1 trials between sound and pre epochs
+diffBase(2) =  ttest(all{1,1},all{1,2}); % t-test for lick rate difference in type 1 trials between sound and pre epochs
 
 %% Create output
 % collect test statistics
@@ -94,3 +101,4 @@ parameters(2,5)   = parameters(5)>thresProb;    % enough reward-collection licks
 % final behavior decision
 decision          = sum(parameters(2,:)==1)==5; % all five tests met?
 
+end
